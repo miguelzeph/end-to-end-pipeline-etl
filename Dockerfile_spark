@@ -1,0 +1,17 @@
+# Use a base Spark image with Hadoop support
+FROM bitnami/spark:3.3.0
+
+# Switch to root user to install additional dependencies
+USER root
+
+# Install system dependencies required for Spark
+RUN apt-get update && apt-get install -y \
+    openjdk-11-jdk-headless \
+    curl \
+    && apt-get clean
+
+# Switch back to the non-root user
+USER 1001
+
+# Copy Spark scripts into the work directory
+COPY ./src/spark /opt/spark/work-dir

@@ -84,8 +84,22 @@ apache-airflow
 
 Use Docker Compose to start all the services (PostgreSQL, Zookeeper, Kafka, Airflow, Spark, and MongoDB).
 
+1 - `(Execute just the first time)` Run airflow-init to Initialize the Database:
+
 ```bash
-docker-compose up
+sudo docker-compose run airflow-init
+```
+
+2 - `(Execute just the first time)` Run airflow-create-user to Create the Admin User:
+
+```bash
+sudo docker-compose run airflow-create-user
+```
+
+3 `(you can go to this step if you have ran the container before)` Start All Services: After initializing the database and creating the user, start all services:
+
+```bash
+sudo docker-compose up
 ```
 
 This command will:

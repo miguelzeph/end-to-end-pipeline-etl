@@ -1,0 +1,19 @@
+# Use the official Apache Airflow image with Python 3.8
+FROM apache/airflow:2.5.1-python3.8
+
+# Switch to root user to install additional dependencies
+USER root
+
+# Install system dependencies required for PostgreSQL and Kafka
+RUN apt-get update && apt-get install -y \
+    gcc \
+    libpq-dev \
+    && apt-get clean
+
+# Switch back to airflow user
+USER airflow
+
+# Copy and install the required Python dependencies
+COPY ./requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
