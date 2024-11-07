@@ -1,0 +1,51 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Logs and local Airflow files
+logs/
+airflow_logs/
+*.log
+*.out
+
+# Docker-specific files
+docker-compose.override.yml
+*.env
+
+# Spark temporary files
+/tmp/spark/
+spark-warehouse/
+metastore_db/
+
+# MongoDB and PostgreSQL data
+mongo_data/
+postgres_data/
+
+# Airflow
+airflow.cfg
+airflow.db
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints
+
+# Python virtual environment
+venv/
+.env/
+env/
+
+# macOS specific
+.DS_Store
+
+# Test files
+tests/
+.coverage
+
+# General
+*.swp
+*.swo
+*.bak
+*.tmp
