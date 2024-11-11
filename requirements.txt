@@ -3,3 +3,7 @@ pymongo==4.10.1
 pyspark==3.5.3
 psycopg2-binary==2.9.10
 apache-airflow==2.10.3
+
+pyopenssl==24.2.1 # Fixed X509_V_FLAG_NOTIFY_POLICY issue
+cryptography==43.0.3
+protobuf>=5.0

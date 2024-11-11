@@ -34,28 +34,23 @@ services:
       context: .
       dockerfile: Dockerfile_airflow
     environment:
-      AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
-    command: ["airflow", "db", "init"]
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+    command: [ "airflow", "db", "migrate" ]
     depends_on:
       - postgres
-
-  # Airflow User Creation (run once)
+    restart: "no" # Run once and exit
+    # Airflow User Creation (run once)
   airflow-create-user:
     build:
       context: .
       dockerfile: Dockerfile_airflow
     environment:
-      AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
     command: >
-      ["airflow", "users", "create", 
-       "--username", "admin", 
-       "--firstname", "Admin", 
-       "--lastname", "User", 
-       "--role", "Admin", 
-       "--email", "admin@example.com",
-       "--password", "admin"]  # Replace "your_password" with a secure password of your choice
+      airflow users create  --username admin  --firstname Admin  --lastname User  --role Admin  --email admin@example.com  --password admin
     depends_on:
       - airflow-init
+    restart: "no" # Run once and exit
 
   # Airflow Webserver
   airflow-webserver:
@@ -63,7 +58,7 @@ services:
       context: .
       dockerfile: Dockerfile_airflow
     environment:
-      AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
     command: webserver
     ports:
@@ -73,8 +68,7 @@ services:
       - airflow_logs:/opt/airflow/logs
     depends_on:
       - postgres
-      - airflow-init
-      - airflow-create-user  # Ensure user is created before starting webserver
+    restart: always
 
   # Airflow Scheduler
   airflow-scheduler:
@@ -82,7 +76,7 @@ services:
       context: .
       dockerfile: Dockerfile_airflow
     environment:
-      AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
     command: scheduler
     volumes:
@@ -90,8 +84,7 @@ services:
       - airflow_logs:/opt/airflow/logs
     depends_on:
       - postgres
-      - airflow-init
-      - airflow-create-user
+    restart: always
 
   # Spark service
   spark:

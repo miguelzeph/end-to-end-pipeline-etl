@@ -15,5 +15,10 @@ USER airflow
 
 # Copy and install the required Python dependencies
 COPY ./requirements.txt .
+RUN pip install pip --upgrade
+# RUN pip install pyopenssl --upgrade
+
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Copiar a pasta src para dentro do contêiner
+COPY ./src /opt/airflow/src
