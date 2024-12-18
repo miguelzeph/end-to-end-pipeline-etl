@@ -1,0 +1,10 @@
+FROM python:3.9-slim
+
+# Install necessary dependencies
+RUN pip install confluent-kafka
+
+# Copy the scripts to the container in the correct folder
+COPY ./kafka/consumers /app/consumers
+
+# Working directory
+WORKDIR /app/consumers
