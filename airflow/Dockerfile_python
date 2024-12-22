@@ -1,0 +1,8 @@
+# This way you can install other python packages
+# and import in your DAGS.
+
+FROM apache/airflow:2.10.3
+
+# Install confluent-kafka and other dependencies
+RUN pip install confluent-kafka
+

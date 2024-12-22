@@ -1,5 +1,16 @@
 FROM python:3.9-slim
 
+
+##### ATUALIAR O CÓDIGO DEPOIS #####
+
+# Copiar o arquivo requirements.txt para o container
+# COPY ./kafka/requirements.txt /app/requirements.txt
+
+# Instalar as dependências
+# RUN pip install --no-cache-dir -r /app/requirements.txt
+
+#####################################
+
 # Install necessary dependencies
 RUN pip install confluent-kafka
 

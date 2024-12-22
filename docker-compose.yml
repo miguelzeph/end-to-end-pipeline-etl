@@ -1,13 +1,17 @@
-version: '3.9'
+version: '3'
 
 ##############################################################################
 ############################## AIRFLOW #######################################
 ##############################################################################
 x-airflow-common:
   &airflow-common
-  image: ${AIRFLOW_IMAGE_NAME:-apache/airflow:2.10.3}
+  # image: ${AIRFLOW_IMAGE_NAME:-apache/airflow:2.10.3} # REPLACE this IMAGE from the DOCKERFILE_PYTHON, this way you can install Python libraries using your own image and import it on the DAGS... or keep it and add the variable _PIP_ADDITIONAL_REQUIREMENTS
+  build:
+    context: .
+    dockerfile: airflow/Dockerfile_python
   environment:
     &airflow-common-env
+    AIRFLOW_UID: 50000
     AIRFLOW__CORE__EXECUTOR: SequentialExecutor
     AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
     AIRFLOW__FAB__UPDATE_FAB_PERMS: 'true'
@@ -18,6 +22,8 @@ x-airflow-common:
     AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: 'true'
     GUNICORN_CMD_ARGS: "--timeout 300"
     PYTHONWARNINGS: "ignore:invalid escape sequence"
+    # Add Python Libraries
+    # _PIP_ADDITIONAL_REQUIREMENTS: "confluent-kafka"
   volumes:
     - ./airflow/dags:/opt/airflow/dags
     - ./airflow/logs:/opt/airflow/logs
@@ -42,7 +48,6 @@ services:
       retries: 5
       start_period: 5s
     restart: always
-    init: true
 
   airflow-webserver:
     <<: *airflow-common
@@ -61,7 +66,6 @@ services:
         condition: service_healthy
       airflow-init:
         condition: service_completed_successfully
-    init: true
 
   airflow-scheduler:
     <<: *airflow-common
@@ -78,8 +82,6 @@ services:
         condition: service_healthy
       airflow-init:
         condition: service_completed_successfully
-    init: true
-
 
   airflow-init:
     <<: *airflow-common
@@ -108,36 +110,33 @@ services:
     user: "0:0"
     volumes:
       - ./airflow:/sources
-
-
 ##############################################################################
 ############################## END AIRFLOW ###################################
 ##############################################################################
-
 
 ##############################################################################
 ############################## KAFKA #######################################
 ##############################################################################
 
-  zookeeper:
+  zookeeper: # Manager of Kafka Cluster
     image: wurstmeister/zookeeper
     container_name: zookeeper
     ports:
       - "2181:2181"
     restart: always
 
-  #----------------------------------------- BROKERS --------------------------------
-  # Broker 1
-  kafka:
+  kafka-broker-1:
     image: wurstmeister/kafka
-    container_name: kafka
+    depends_on:
+      - zookeeper
+    container_name: kafka-broker-1
     ports:
       - "9092:9092"
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-broker-1:9092
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_LOG_RETENTION_HOURS: 168
     healthcheck:
@@ -147,87 +146,84 @@ services:
       start_period: 30s
       timeout: 20s
     restart: always
-    init: true
 
-  # Broker 2
   kafka-broker-2:
     image: wurstmeister/kafka
+    depends_on: 
+      - zookeeper
     container_name: kafka-broker-2
     ports:
-      - "9093:9092"
+      - "9093:9093"
     environment:
       KAFKA_BROKER_ID: 2
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-broker-2:9092
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-broker-2:9093
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_LOG_RETENTION_HOURS: 168
     healthcheck:
       test: ["CMD", "nc", "-z", "localhost", "9093"]
       interval: 30s
       retries: 5
-      start_period: 30s
+      start_period: 60s
       timeout: 20s
     restart: always
-    init: true
 
-  #----------------------------------------- CONSUMERS --------------------------------
-  # Consumer 1
-  consumer-process-articles:
+  kafka-consumer-print-articles:
     build:
       context: .
       dockerfile: kafka/Dockerfile_python
-    container_name: consumer-articles
-    command: python consumer_articles.py
+    container_name: consumer-print-articles
+    command: python consumer_print_articles.py
     depends_on:
-      - kafka
+      - kafka-broker-1
       - kafka-broker-2
     restart: on-failure
     healthcheck:
-      test: ["CMD", "curl", "--fail", "http://localhost:9092"]
+      test: ["CMD", "curl", "--fail", "http://kafka-broker-1:9092"]
+      interval: 30s
+      retries: 5
+      start_period: 60s
+      timeout: 20s
+
+  kafka-consumer-message-to-topic:
+    build:
+      context: .
+      dockerfile: kafka/Dockerfile_python
+    container_name: consumer-message-to-topic
+    command: python consumer_message_to_topic.py
+    depends_on:
+      - kafka-broker-1
+      - kafka-broker-2
+    restart: on-failure
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://kafka-broker-1:9092"]
       interval: 30s
       retries: 5
       start_period: 30s
       timeout: 20s
 
-  # Consumer 2
-  consumer-send-message-to-topic:
-    build:
-      context: .
-      dockerfile: kafka/Dockerfile_python
-    container_name: consumer-send-message-to-topic
-    command: python consumer_send_message_to_topic.py
-    depends_on:
-      - kafka
-      - kafka-broker-2
-    restart: on-failure
-    healthcheck:
-      test: ["CMD", "curl", "--fail", "http://localhost:9092"]
-      interval: 30s
-      retries: 5
-      start_period: 30s
-      timeout: 20s
-
-  #------------------------------------- GRAPHICAL INTERFACE ---------------------------
   kafka-ui:
     image: provectuslabs/kafka-ui
     container_name: kafka-ui
     ports:
-      - "8000:8000"
+      - "8001:8001"
     depends_on:
-      - kafka
+      - kafka-broker-1
       - kafka-broker-2
       - zookeeper
     environment:
+      SERVER_PORT: 8001
       KAFKA_CLUSTERS_0_NAME: local
-      KAFKA_CLUSTERS_0_BOOTSTRAP_SERVERS: kafka:9092,kafka-broker-2:9093
+      KAFKA_CLUSTERS_0_BOOTSTRAP_SERVERS: kafka-broker-1:9092,kafka-broker-2:9093
       KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
-
+      KAFKA_UI_AUTH_ENABLED: true
+      KAFKA_UI_AUTH_USER: admin
+      KAFKA_UI_AUTH_PASSWORD: admin_password
 
 ##############################################################################
 ############################## END KAFKA ###################################
 ##############################################################################
-
 
 volumes:
   postgres-db-volume:
