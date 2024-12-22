@@ -151,7 +151,23 @@ So, once we have **Kafka** and **Airflow** running you can send messages to the 
 
 ---
 
+To stop all containers and keeping all resources (networks, volumes, etc.)
+```bash
+sudo docker-compose stop
+```
 
+If you want to removes the created containers and networks, completely shutting down the environment.
+
+```bash
+sudo docker-compose down --volumes
+```
+
+
+
+
+
+
+---
 
 
 Use Docker Compose to start all the services (PostgreSQL, Zookeeper, Kafka, Airflow, Spark, and MongoDB).
