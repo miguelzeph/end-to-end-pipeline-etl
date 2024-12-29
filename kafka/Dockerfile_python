@@ -1,18 +1,28 @@
-FROM python:3.9-slim
+FROM python:3.11-slim
 
 
-##### ATUALIAR O CÓDIGO DEPOIS #####
+# Atualize o repositório e instale o OpenJDK 11
+RUN apt-get update && \
+    apt-get install -y wget gnupg && \
+    echo "deb http://deb.debian.org/debian bullseye main" >> /etc/apt/sources.list && \
+    apt-get update && \
+    apt-get install -y openjdk-11-jre-headless && \
+    apt-get clean
+
+
+ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+ENV PATH=$JAVA_HOME/bin:$PATH
+
+
+# Configurar variáveis de ambiente para o Spark
+ENV SPARK_HOME=/usr/local/lib/python3.11/site-packages/pyspark
+ENV PATH=$SPARK_HOME/bin:$PATH
 
 # Copiar o arquivo requirements.txt para o container
-# COPY ./kafka/requirements.txt /app/requirements.txt
+COPY ./kafka/requirements.txt /app/requirements.txt
 
 # Instalar as dependências
-# RUN pip install --no-cache-dir -r /app/requirements.txt
-
-#####################################
-
-# Install necessary dependencies
-RUN pip install confluent-kafka
+RUN pip install --no-cache-dir -r /app/requirements.txt
 
 # Copy the scripts to the container in the correct folder
 COPY ./kafka/consumers /app/consumers

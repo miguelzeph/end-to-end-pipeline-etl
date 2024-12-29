@@ -110,12 +110,9 @@ services:
     user: "0:0"
     volumes:
       - ./airflow:/sources
-##############################################################################
-############################## END AIRFLOW ###################################
-##############################################################################
 
 ##############################################################################
-############################## KAFKA #######################################
+################################ KAFKA #######################################
 ##############################################################################
 
   zookeeper: # Manager of Kafka Cluster
@@ -190,11 +187,17 @@ services:
     build:
       context: .
       dockerfile: kafka/Dockerfile_python
+    environment:
+      - JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+      - SPARK_HOME=/usr/local/lib/python3.11/site-packages/pyspark
+      - PATH=/usr/lib/jvm/java-11-openjdk-amd64/bin:/usr/local/lib/python3.11/site-packages/pyspark/bin:$PATH
     container_name: consumer-message-to-topic
     command: python consumer_message_to_topic.py
     depends_on:
       - kafka-broker-1
       - kafka-broker-2
+      - spark-worker-1
+      - spark-worker-2
     restart: on-failure
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://kafka-broker-1:9092"]
@@ -222,8 +225,45 @@ services:
       KAFKA_UI_AUTH_PASSWORD: admin_password
 
 ##############################################################################
-############################## END KAFKA ###################################
+################################## SPARK #####################################
 ##############################################################################
+
+  spark-master:
+    image: bitnami/spark:latest
+    container_name: spark-master
+    environment:
+      - SPARK_MODE=master
+      - SPARK_MASTER_WEBUI_PORT=8085
+    ports:
+      # External (host) port: Internal (container) port
+      - "7077:7077" # Port for Spark Master (used for connecting your Python scripts or other clients)
+      - "8085:8085" # Web interface for monitoring the Spark Master
+
+  spark-worker-1:
+    image: bitnami/spark:latest
+    container_name: spark-worker-1
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark-master:7077
+    depends_on:
+      - spark-master
+    ports:
+      # The port mapping here is optional. Spark Master handles worker assignments automatically.
+      # Exposing this port allows direct access to this specific worker's web interface.
+      - "8081:8081" # Web interface for Spark Worker 1 (also accessible via the Master's Applications tab)
+
+  spark-worker-2:
+    image: bitnami/spark:latest
+    container_name: spark-worker-2
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark-master:7077
+    depends_on:
+      - spark-master
+    ports:
+      # Optional port mapping to access the second worker's web interface.
+      # The web UI of Spark Master can also display worker details under the Applications tab.
+      - "8082:8081" # Web interface for Spark Worker 2
 
 volumes:
   postgres-db-volume:

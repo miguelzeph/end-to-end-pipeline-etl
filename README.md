@@ -102,17 +102,17 @@ sudo docker-compose up postgres airflow-init airflow-scheduler airflow-webserver
 
 ---
 
-2. Starting `Kafka`: 
+2. Starting `Kafka` and `Spark`: 
 
 P.S. Before start the CONSUMER, always start the BROKER/ZOOKEEPER first and create the TOPICS related to the CONSUMER (SAME NAME). Only after that then you can start the CONSUMER. If you don't do it, you will get error of conection.
 
 - Starting Kafka `ZOOKEEPER/BROKERS/UI`
 
 ```bash
-docker-compose up zookeeper kafka-broker-1 kafka-broker-2 kafka-ui
+sudo docker-compose up zookeeper kafka-broker-1 kafka-broker-2 kafka-ui spark-master spark-worker-1 spark-worker-2
 
 # P.S if you want to restart from scratch, use --build
-docker-compose up --build zookeeper kafka-broker-1 kafka-broker-2 kafka-ui
+sudo docker-compose up --build zookeeper kafka-broker-1 kafka-broker-2 kafka-ui spark-master spark-worker-1 spark-worker-2
 ```
 
 - Go to **localhost:8001** and create the topics (Make sure the topic's name are correct and UPPERCASE):
@@ -135,10 +135,18 @@ The kafka-consumer-message-to-topic is represented by the file kafka/consumers/`
       - Go to `Topics`
       - click in `ARTICLES` (after created the Topic)
       - click in `Produce Message`
-      - right a JSON object: {"id":"article-1","title":"Kafka Basics","content":"Introduction to Kafka"}
+      - right a JSON object: `{"id":"article-1","title":"Kafka Basics","content":"Introduction to Kafka"}`
       - send message
 
-**IMPORTANT** - The only requirement to send messages is that you create the **"id"** field because our python script needs this field to process the key, in the other fields, you can write whatever you want.
+**IMPORTANT MESSAGE FORMAT** - The requirement to send messages is that you create the **"id"**, **"title"** and **"content"** fields because python script (Kafka & Spark) needs this field to process the key.
+
+```json 
+{
+      "id":"....",
+      "title":"....",
+      "content":"...."
+}
+```
 
 
 - Sending message to the TOPIC ARTICLES (from Airflow pipeline )
