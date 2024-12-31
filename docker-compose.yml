@@ -47,7 +47,7 @@ services:
       interval: 10s
       retries: 5
       start_period: 5s
-    restart: always
+    # restart: always
 
   airflow-webserver:
     <<: *airflow-common
@@ -60,7 +60,7 @@ services:
       timeout: 10s
       retries: 5
       start_period: 30s
-    restart: always
+    # restart: always
     depends_on:
       postgres:
         condition: service_healthy
@@ -76,7 +76,7 @@ services:
       timeout: 10s
       retries: 5
       start_period: 30s
-    restart: always
+    # restart: always
     depends_on:
       postgres:
         condition: service_healthy
@@ -120,7 +120,7 @@ services:
     container_name: zookeeper
     ports:
       - "2181:2181"
-    restart: always
+    # restart: always
 
   kafka-broker-1:
     image: wurstmeister/kafka
@@ -142,7 +142,7 @@ services:
       retries: 5
       start_period: 30s
       timeout: 20s
-    restart: always
+    # restart: always
 
   kafka-broker-2:
     image: wurstmeister/kafka
@@ -164,7 +164,7 @@ services:
       retries: 5
       start_period: 60s
       timeout: 20s
-    restart: always
+    # restart: always
 
   kafka-consumer-print-articles:
     build:
@@ -175,7 +175,7 @@ services:
     depends_on:
       - kafka-broker-1
       - kafka-broker-2
-    restart: on-failure
+    # restart: on-failure
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://kafka-broker-1:9092"]
       interval: 30s
@@ -198,7 +198,7 @@ services:
       - kafka-broker-2
       - spark-worker-1
       - spark-worker-2
-    restart: on-failure
+    # restart: on-failure
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://kafka-broker-1:9092"]
       interval: 30s
@@ -265,5 +265,39 @@ services:
       # The web UI of Spark Master can also display worker details under the Applications tab.
       - "8082:8081" # Web interface for Spark Worker 2
 
+##############################################################################
+################################ MONGODB #####################################
+##############################################################################
+
+  mongo:
+    image: mongo:latest
+    container_name: mongo
+    # restart: always
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=mongodb
+      - MONGO_INITDB_ROOT_PASSWORD=mongodb
+    volumes:
+      - mongo-data:/data/db
+    ports:
+      - "27017:27017"  # Porta para acesso ao MongoDB
+
+  mongo-express:
+    image: mongo-express:latest
+    container_name: mongo-express
+    # restart: always
+    environment:
+      - ME_CONFIG_MONGODB_SERVER=mongo
+      - ME_CONFIG_MONGODB_PORT=27017
+      - ME_CONFIG_MONGODB_ADMINUSERNAME=mongodb
+      - ME_CONFIG_MONGODB_ADMINPASSWORD=mongodb
+      - ME_CONFIG_WEBUI_ADMIN_USERNAME=admin 
+      - ME_CONFIG_WEBUI_ADMIN_PASSWORD=admin 
+    ports:
+      # Host Port : Container Port
+      - "8087:8081"
+    depends_on:
+      - mongo
+
 volumes:
   postgres-db-volume:
+  mongo-data:
