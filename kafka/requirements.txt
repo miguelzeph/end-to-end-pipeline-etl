@@ -1,2 +1,3 @@
-confluent-kafka # Kafka
+confluent-kafka==2.7.0 # Kafka
 pyspark==3.5.2 # Spark
+pymongo

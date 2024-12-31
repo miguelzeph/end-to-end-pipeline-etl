@@ -1,2 +1,2 @@
 # install the Libraries necessary to use in the DAG
-confluent-kafka # Kafka
+confluent-kafka==2.7.0 # Kafka

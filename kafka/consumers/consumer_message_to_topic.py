@@ -20,6 +20,8 @@ from confluent_kafka import Consumer, Producer
 from spark.connect_spark_master import spark_session
 from pyspark.sql.functions import col, from_json, lit, struct, to_json
 from pyspark.sql.types import StructType, StringType
+# MongoDB
+from mongo.functions import save_processed_message
 
 # Setting logging
 logging.basicConfig(
@@ -116,7 +118,10 @@ try:
             )
             producer.flush()
             logging.info(f"Message sent to {KAFKA_TOPIC_PROCESSED}: {processed_message}")
-
+            
+            # Save into Mongo Collection
+            save_processed_message(processed_message)
+            
 finally:
     consumer.close()
     spark_session.close()
